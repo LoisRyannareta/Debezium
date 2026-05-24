@@ -17,7 +17,7 @@ services:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://${BOOTSTRAP_SERVERS}:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
@@ -57,19 +57,26 @@ services:
       KEY_CONVERTER_SCHEMAS_ENABLE: "false"
       VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
       PLUGIN_PATH: /kafka/connect
-    env_file: .env
+    volumes:
+      - ./connect:/connect-configs
     command:
       - bash
       - -c
       - |
-        confluent-hub install --no-prompt confluentinc/kafka-connect-jdbc:latest
-        /docker-entrypoint.sh start
+        command -v curl > /dev/null 2>&1 || microdnf install -y curl > /dev/null 2>&1
 
-  tunnel-kafka:
-    image: ngrok/ngrok:latest
-    environment:
-      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
-    env_file: .env
-    command: tcp kafka:9092
-    depends_on:
-      - kafka
+        confluent-hub install --no-prompt confluentinc/kafka-connect-jdbc:latest
+        /docker-entrypoint.sh start &
+
+        for i in $(seq 1 30); do
+          if curl -s http://localhost:8083/ > /dev/null 2>&1; then
+            break
+          fi
+          sleep 2
+        done
+
+        curl -X POST http://localhost:8083/connectors \
+          -H "Content-Type: application/json" \
+          -d @/connect-configs/connect.json
+
+        wait

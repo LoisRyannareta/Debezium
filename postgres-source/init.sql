@@ -1,8 +1,8 @@
 CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
+    id INTEGER PRIMARY KEY,
     name VARCHAR(100),
     email VARCHAR(100)
 );
 
-INSERT INTO users(name, email)
-VALUES ('Andi', 'andi@gmail.com');
+INSERT INTO users(id, name, email)
+VALUES (1, 'Andi', 'andi@gmail.com');

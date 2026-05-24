@@ -13,6 +13,7 @@ services:
   connect:
     image: quay.io/debezium/connect:2.5
     container_name: debezium-connect
+    network_mode: host
     depends_on:
       - postgres-target
     environment:
@@ -30,9 +31,26 @@ services:
       VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
       PLUGIN_PATH: /kafka/connect
     env_file: .env
+    volumes:
+      - ./connect:/connect-configs
     command:
       - bash
       - -c
       - |
+        command -v curl > /dev/null 2>&1 || microdnf install -y curl > /dev/null 2>&1
+
         confluent-hub install --no-prompt confluentinc/kafka-connect-jdbc:latest
-        /docker-entrypoint.sh start
+        /docker-entrypoint.sh start &
+
+        for i in $(seq 1 30); do
+          if curl -s http://localhost:8083/ > /dev/null 2>&1; then
+            break
+          fi
+          sleep 2
+        done
+
+        curl -X POST http://localhost:8083/connectors \
+          -H "Content-Type: application/json" \
+          -d @/connect-configs/sink.json
+
+        wait
