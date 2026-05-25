@@ -9,8 +9,11 @@
     "database.password": "postgres",
     "database.dbname": "sourcedb",
     "topic.prefix": "cdc",
+    "topics": "cdc.public.users",
     "table.include.list": "public.users",
     "slot.name": "debezium_slot",
-    "publication.autocreate.mode": "filtered"
+    "publication.autocreate.mode": "filtered",
+    "key.converter.schemas.enable": "true",
+    "value.converter.schemas.enable": "true"
   }
 }
